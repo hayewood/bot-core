@@ -4,7 +4,11 @@ module.exports = (async function (namespace = "hb", options = {}) {
     const SingletonTemplate = require("./singleton-template");
     const files = [
         "classes/channel",
-        "classes/user"
+		"classes/user",
+		"classes/command",
+
+		"singletons/command-cooldown",
+
     ]
 
     for (const file of files) {

@@ -8,7 +8,7 @@ module.exports = (function () {
         headers: {'Authorization': process.env.APIKEY}
       });
 
-    return class User {
+    const User = class User {
         constructor(data) {
             this.Name = data.user_name;
 
@@ -18,14 +18,21 @@ module.exports = (function () {
         }
         /** @override */
         static async init () {
+            User.data = new Map();
             await User.loadData();
             return User;
         }
 
         static async loadData () {
+            /** @type {Map<string, User>} */
+            User.data = User.data || new Map();
             /** @type User[] */
             try {
-                User.data = ((await instance.get('/users')).data).map(record => new User(record));
+                var users = (await (instance.get('/users'))).data;
+                //User.data = users.map(record => new User(record));
+                for (const user of users) {
+                    User.data.set(user.user_name, user);
+                }
             }catch(error) {
                 console.log(error);
             }
@@ -33,9 +40,44 @@ module.exports = (function () {
 
         
         static async reloadData () {
-            User.data = [];
+            User.data.clear();
             await User.loadData();
         }
 
+        static async get (identifier, strict = true) {
+            if (identifier instanceof User) {
+                return identifier;
+            }
+
+            if(typeof identifier === "number") {
+                
+            }
+            else if (typeof identifier === "string") {
+                identifier = identifier.replace(/^@/, "").toLowerCase();
+                let user = User.data.get(identifier);
+
+                if (!user) {
+                    try {
+                        var data = (await (instance.post("/users", {
+                                user_name: identifier,
+                                points: 0
+                                }))).data;
+                        if(data.error) {
+                            console.debug(user.error.message);
+                        }
+                        else {
+                            User.data.set(identifier, data.user_added);
+                            user = User.data.get(identifier);
+                        }
+                    }catch(error) {
+                        console.debug(error);
+                    }
+                            
+                }
+
+                return user;
+            }
+        }
     }
+    return User;
 })();
